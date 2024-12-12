@@ -1,0 +1,138 @@
+/* General body styling */
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #f8f9fa, #e3f2fd);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Main container */
+.container {
+    width: 100%;
+    max-width: 500px;
+    margin: auto;
+    background-color: #ffffff;
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header styling */
+.chat-header {
+    background: linear-gradient(135deg, #1976d2, #64b5f6);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    font-weight: 600;
+}
+
+/* Chat window styling */
+.chat-window {
+    padding: 20px;
+    height: 400px;
+    overflow-y: auto;
+    background-color: #fafafa;
+    border-bottom: 1px solid #ddd;
+}
+
+/* User and bot message blocks */
+.user-message,
+.bot-response {
+    margin-bottom: 15px;
+    display: flex;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.bot-response {
+    justify-content: flex-start;
+}
+
+/* Message bubbles */
+.user-message p,
+.bot-response p {
+    padding: 12px 18px;
+    font-size: 14px;
+    border-radius: 20px;
+    max-width: 75%;
+    line-height: 1.4;
+    word-wrap: break-word;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-message p {
+    background: linear-gradient(135deg, #4caf50, #81c784);
+    color: white;
+    text-align: right;
+    margin-left: auto;
+}
+
+.bot-response p {
+    background: #ffffff;
+    color: #333;
+    text-align: left;
+    margin-right: auto;
+    border: 1px solid #ddd;
+}
+
+/* Chat form styling */
+.chat-form {
+    display: flex;
+    border-top: 1px solid #ddd;
+    background-color: #ffffff;
+}
+
+.chat-form input {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    font-size: 14px;
+    outline: none;
+    border-radius: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+.chat-form input::placeholder {
+    color: #aaa;
+}
+
+.chat-form button {
+    background: linear-gradient(135deg, #1976d2, #64b5f6);
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+}
+
+.chat-form button:hover {
+    background: linear-gradient(135deg, #1565c0, #42a5f5);
+}
+
+/* Scrollbar customization */
+.chat-window::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+    background-color: #b0bec5;
+    border-radius: 10px;
+}
+
+.chat-window::-webkit-scrollbar-thumb:hover {
+    background-color: #90a4ae;
+}
