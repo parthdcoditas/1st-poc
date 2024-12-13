@@ -22,7 +22,7 @@ def cache_search(user_query):
     user_query_embedding = embeddings_model.embed_query(user_query)
     embedding_list = np.array(user_query_embedding).tolist()
 
-    SIMILARITY_THRESHOLD = 0.85
+    SIMILARITY_THRESHOLD = 0.5     
 
     cursor.execute(
         """
@@ -39,7 +39,7 @@ def cache_search(user_query):
     if results:
         best_response, max_similarity = results[0]
         if max_similarity >= SIMILARITY_THRESHOLD:
-            return f"This is cached response------\n{best_response}"
+            return f"This is cached response-----------------{best_response}"
         
     return get_context_and_generate_response(user_query, embedding_list)
 
@@ -49,7 +49,8 @@ def get_context_and_generate_response(user_query, embedding_list):
 
     context = "\n".join([doc.page_content for doc in similar_docs])
 
-    prompt = PromptTemplate(input_variables=["query", "context"], template="Given the following context: {context}\nAnswer the query: {query}")
+    prompt = PromptTemplate(input_variables=["query", "context"], 
+                            template="Given the following context: {context}\nAnswer the query: {query}")
     llm = ChatGroq(api_key=os.getenv("GROQ_API_KEY"), model="mixtral-8x7b-32768")
 
     llm_chain = prompt | llm

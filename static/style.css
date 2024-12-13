@@ -33,13 +33,13 @@ body {
     font-weight: 600;
 }
 
-/* Chat window styling */
 .chat-window {
     padding: 20px;
-    height: 400px;
-    overflow-y: auto;
-    background-color: #fafafa;
-    border-bottom: 1px solid #ddd;
+    height: 400px; /* Increased height */
+    overflow-y: auto; /* Enable scrolling */
+    background-color: #f0f8ff; /* Light blue background */
+    border: 1px solid #ccc;
+    border-radius: 10px;
 }
 
 /* User and bot message blocks */

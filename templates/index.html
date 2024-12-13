@@ -13,16 +13,14 @@
             <h2>Chat with Us</h2>
         </div>
         <div class="chat-window">
-            {% if user_query %}
+            {% for entry in chat_history %}
             <div class="user-message">
-                <p>{{ user_query }}</p>
+                <p>{{ entry.query }}</p>
             </div>
-            {% endif %}
-            {% if response %}
             <div class="bot-response">
-                <p>{{ response }}</p>
+                <p>{{ entry.response }}</p>
             </div>
-            {% endif %}
+            {% endfor %}
         </div>
         <form method="POST" class="chat-form">
             <input type="text" name="user_query" placeholder="Ask me anything..." required>
