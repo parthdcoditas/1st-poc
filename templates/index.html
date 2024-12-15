@@ -3,29 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>Chat Interface</title>
 </head>
 <body>
-    <div class="container">
+    <div class="chat-container">
         <div class="chat-header">
-            <h2>Chat with Us</h2>
+            <h2>Chatbot</h2>
         </div>
-        <div class="chat-window">
-            {% for entry in chat_history %}
-            <div class="user-message">
-                <p>{{ entry.query }}</p>
-            </div>
-            <div class="bot-response">
-                <p>{{ entry.response }}</p>
-            </div>
-            {% endfor %}
+        <div class="chat-window" id="chat-window">
+            <!-- Messages will be dynamically added here -->
         </div>
-        <form method="POST" class="chat-form">
-            <input type="text" name="user_query" placeholder="Ask me anything..." required>
+        <form id="chat-form">
+            <input type="text" id="chat-input" placeholder="Enter your query here..." required>
             <button type="submit">Send</button>
         </form>
     </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatWindow = document.getElementById('chat-window');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userQuery = chatInput.value.trim();
+            chatInput.value = '';
+
+            if (!userQuery) {
+                addMessage("Please enter a valid query.", 'error');
+                return;
+            }
+
+            addMessage(userQuery, 'user');
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: userQuery })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addMessage(data.response, 'bot');
+
+                    if (data.cached) {
+                        addMessage(data.follow_up, 'bot-feedback');
+                    }
+                } else {
+                    addMessage(data.error || 'An error occurred.', 'error');
+                }
+            } catch (err) {
+                addMessage('Failed to fetch response. Please try again.', 'error');
+            }
+        });
+
+        function addMessage(text, type) {
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            chatWindow.appendChild(message);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+    </script>
 </body>
 </html>
