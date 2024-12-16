@@ -5,6 +5,8 @@ import numpy as np
 import psycopg2
 import os
 from dotenv import load_dotenv
+from langgraph.graph import StateGraph, START, END
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
@@ -17,13 +19,18 @@ connection = psycopg2.connect(
 )
 cursor = connection.cursor()
 
-def cache_search(user_query):
-    """Search for a cached response."""
-    user_query_embedding = embeddings_model.embed_query(user_query)
-    embedding_list = np.array(user_query_embedding).tolist()
+class QueryState(BaseModel):
+    user_query: str = Field(default="")
+    embedding_list: list = Field(default_factory=list)
+    cached: bool = Field(default=False)
+    cached_query: str = Field(default="")
+    response: str = Field(default="")
+    context: str = Field(default="")
+    force_llm_call: bool = Field(default=False) 
 
-    SIMILARITY_THRESHOLD = 0.5  
-
+def cache_search(state: QueryState):
+    state.embedding_list = np.array(embeddings_model.embed_query(state.user_query)).tolist()
+    SIMILARITY_THRESHOLD = 0.5
     cursor.execute(
         """
         SELECT response, user_query, 1 - (embedding <-> %s::vector) AS similarity
@@ -31,24 +38,25 @@ def cache_search(user_query):
         ORDER BY embedding <-> %s::vector
         LIMIT %s
         """,
-        (embedding_list, embedding_list, 5),
+        (state.embedding_list, state.embedding_list, 5),
     )
-
     results = cursor.fetchall()
-
     if results:
         best_response, cached_query, max_similarity = results[0]
         if max_similarity >= SIMILARITY_THRESHOLD:
-            return {"cached": True, "response": best_response, "cached_query": cached_query}
+            state.cached = True
+            state.response = best_response
+            state.cached_query = cached_query
+    return state
 
-    new_response = get_context_and_generate_response(user_query, embedding_list)
-    return {"cached": False, "response": new_response}
+def get_context_and_generate_response(state: QueryState):
+    """Generate a response using the LLM if no cached response is found."""
+    if state.cached and not state.force_llm_call:
+        return state  
 
-def get_context_and_generate_response(user_query, embedding_list, cached_query=None):
     retriever = similar_document()
-    similar_docs = retriever.invoke(user_query)
-
-    context = "\n".join([doc.page_content for doc in similar_docs])
+    similar_docs = retriever.invoke(state.user_query)
+    state.context = "\n".join([doc.page_content for doc in similar_docs])
 
     prompt = PromptTemplate(
         input_variables=["query", "context"], 
@@ -58,24 +66,20 @@ def get_context_and_generate_response(user_query, embedding_list, cached_query=N
 
     llm_chain = prompt | llm
 
-    response = llm_chain.invoke({"query": user_query, "context": context})
-    response_content = response.content if hasattr(response, 'content') else str(response)
+    response = llm_chain.invoke({"query": state.user_query, "context": state.context})
+    state.response = response.content if hasattr(response, 'content') else str(response)
+    
+    return state
 
-    store_query_and_response(user_query, embedding_list, response_content, cached_query)
-
-    return response_content
-
-def store_query_and_response(user_query, embedding_list, llm_response, cached_query=None):
-    llm_response = str(llm_response)
-
-    if cached_query:
+def store_query_and_response(state: QueryState):
+    if state.cached_query:
         cursor.execute(
             """
             UPDATE cache_storage
             SET user_query = %s, response = %s, embedding = %s::vector
             WHERE user_query = %s;
             """,
-            (user_query, llm_response, embedding_list, cached_query),
+            (state.user_query, state.response, state.embedding_list, state.cached_query),
         )
     else:
         cursor.execute(
@@ -83,7 +87,21 @@ def store_query_and_response(user_query, embedding_list, llm_response, cached_qu
             INSERT INTO cache_storage (user_query, embedding, response)
             VALUES (%s, %s::vector, %s);
             """,
-            (user_query, embedding_list, llm_response),
+            (state.user_query, state.embedding_list, state.response),
         )
 
     connection.commit()
+    return state
+
+workflow = StateGraph(QueryState)
+
+workflow.add_node("cache_search", cache_search)
+workflow.add_node("get_context_and_generate_response", get_context_and_generate_response)
+workflow.add_node("store_query_and_response", store_query_and_response)
+
+workflow.add_edge(START, "cache_search")
+workflow.add_edge("cache_search", "get_context_and_generate_response")
+workflow.add_edge("get_context_and_generate_response", "store_query_and_response")
+workflow.add_edge("store_query_and_response", END)
+
+compiled_app = workflow.compile()

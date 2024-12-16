@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify
-from helper_functions import cache_search, get_context_and_generate_response,store_query_and_response
-from embedding_generate import embeddings_model
-import numpy as np
+from helper_functions import compiled_app, QueryState
+
 app = Flask(__name__)
 
 session_state = {
@@ -32,34 +31,27 @@ def chat():
             return jsonify({"response": "Glad you are satisfied! You can enter a new query now."})
 
         elif feedback == 'no':
-            user_query_embedding = embeddings_model.embed_query(session_state["last_query"])
-            embedding_list = np.array(user_query_embedding).tolist()
+            state_dict = compiled_app.invoke({"user_query": session_state["last_query"], "force_llm_call": True})
+            state = QueryState(**state_dict)  
+            session_state["waiting_for_feedback"] = False  
+            return jsonify({"response": state.response}) 
 
-            regenerated_response = get_context_and_generate_response(
-                session_state["last_query"], embedding_list, session_state["cached_query"]
-            )
-
-            store_query_and_response(
-                session_state["last_query"], embedding_list, regenerated_response, session_state["cached_query"]
-            )
-
-            session_state["waiting_for_feedback"] = False
-            return jsonify({"response": regenerated_response})
-
-    search_result = cache_search(user_query)
-    if search_result["cached"]:
+    state_dict = compiled_app.invoke({"user_query": user_query})
+    state = QueryState(**state_dict)  
+    
+    if state.cached:
         session_state["waiting_for_feedback"] = True
         session_state["last_query"] = user_query
         session_state["cached_query"] = user_query
         return jsonify({
-            "response": search_result["response"],
+            "response": state.response,
             "cached": True,
             "follow_up": "Are you satisfied with the response? (yes/no)"
         })
     else:
         session_state["last_query"] = user_query
         session_state["cached_query"] = None
-        return jsonify({"response": search_result["response"], "cached": False})
+        return jsonify({"response": state.response, "cached": False})
 
 if __name__ == "__main__":
     app.run(debug=True)
